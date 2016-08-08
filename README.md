@@ -1,2 +1,2 @@
-# mano-client
-client for mano validation
+# nfv-client
+client for nfv validation
