@@ -1,0 +1,4 @@
+" 使用 space 代替 tab
+set expandtab " 使用 space 代替 tab
+set tabstop=2 " Google Style 要求是两个空格，这里是设置 Tab 显示的宽度
+set shiftwidth=2 " 自动缩进的宽度两个空格
