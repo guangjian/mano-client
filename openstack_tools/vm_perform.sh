@@ -1,92 +1,167 @@
 #!/usr/bin/bash
 
 #
-# for vm performance action testing
+# for openstack vm performance testing script
 # Author: Guangjian guangjian@gmail.com
 #
-# USAGE: vm_perform.sh -a action
+# USAGE: vm_perform.sh -n vm_number -e network_uuid -a <start|stop|restart|delete|create>
 #
 
-if [ $# != 2 ]
+if [ $# != 6 ]
 then
-	echo "usage  vm_perform.sh -a <start|stop|restart|delete|create>"
+	echo "usage  vm_perform.sh -n vm_number -e network_uuid -a <start|stop|restart|delete|create>"
 	exit 1
 fi
 
 source /root/keystonerc_guangjian
 
+vm_number=1
+
 create_vms()
 {
-	nova boot --flavor 2U2G-100G --image redhat7-v3 --max-count 10 --nic net-id=28a4105c-df59-4a63-92e7-19abbf41fda9 alu-perf
+    echo "====> start vm's <===="
+    date "+%Y-%m-%d %H:%M:%S"
+    start_time=$(date +%s)
+	nova boot --flavor default --image redhat7-v3 --max-count $vm_number --nic net-id=$network_uuid alu-perf
+    while [ true ]
+    do  
+        vms=`nova list|grep -i active|grep alu|wc -l`;
+        date "+%Y-%m-%d %H:%M:%S"
+        if [ $vms -eq $vm_number ]; then
+            echo -e "all [$vms] vms created\n"
+            end_time=$(date +%s)
+            break
+        else
+            echo -e "found that [$vms] vms created\n"
+        fi
+    done
+    end_time=$(date +%s)
+    echo -e "execute command [nova list]"
+    nova list
+    echo "Total elapse: $((end_time-start_time)) seconds"
 }
 
 stop_vms()
 {
 	echo "====> stop vm's <===="
-	date
-	nova stop alu-perf-1 alu-perf-2 alu-perf-3 alu-perf-4 alu-perf-5 alu-perf-6 alu-perf-7 alu-perf-8 alu-perf-9 alu-perf-10;
+    date "+%Y-%m-%d %H:%M:%S"
+    start_time=$(date +%s)
+	nova stop $vm_str;
 	echo
 
-	for i in `seq 60` 
+	while [ true ]
 	do
-		echo -e "count vm status [${i}] - `date` ";
-		nova list|grep -i Shutoff|grep alu|wc -l;
+        vms=`nova list|grep -i Shutoff|grep alu|wc -l`;        
+        date "+%Y-%m-%d %H:%M:%S"
+        if [ $vms -eq $vm_number ]; then
+            echo -e "all [$vms] vms stopped\n"
+            end_time=$(date +%s)
+            break
+        else
+            echo -e "found that [$vms] vms stopped\n"
+        fi
 	done
+    echo -e "execute command [nova list]"
+    nova list
+    echo "Total elapse: $((end_time-start_time)) seconds"
 }
 
 start_vms()
 {
 	echo "====> start vm's <===="
-	date
-	nova start alu-perf-1 alu-perf-2 alu-perf-3 alu-perf-4 alu-perf-5 alu-perf-6 alu-perf-7 alu-perf-8 alu-perf-9 alu-perf-10;
+    date "+%Y-%m-%d %H:%M:%S"
+	start_time=$(date +%s)
+	nova start $vm_str;
 	echo
 
-	for i in `seq 10` 
-	do
-		echo -e "count vm status [${i}] - `date` ";
-		nova list|grep -i active|grep alu|wc -l;
-	done
+    while [ true ]
+    do  
+        vms=`nova list|grep -i active|grep alu|wc -l`;
+        date "+%Y-%m-%d %H:%M:%S"
+        if [ $vms -eq $vm_number ]; then
+            echo -e "all [$vms] vms started\n"
+            end_time=$(date +%s)
+            break
+        else
+            echo -e "found that [$vms] vms started\n"
+        fi
+    done
+
+    echo -e "execute command [nova list]"
+    nova list
+    echo "Total elapse: $((end_time-start_time)) seconds"
 }
 
 
 restart_vms()
 {
 	echo "====> restart vm's <===="
-	date
-	for j in `seq 10`
+    date "+%Y-%m-%d %H:%M:%S"
+    start_time=$(date +%s)
+	for j in `seq $vm_number`
 	do
 		echo "reboot vm [alu-perf-${j}]"
 		#nova reboot --hard alu-perf-${j}
 		nova reboot alu-perf-${j}
 	done
 
-	echo
-
-	for i in `seq 10` 
-	do
-		echo -e "count vm status [${i}] - `date` ";
-		nova list|grep -i ACTIVE|grep alu|wc -l;
-	done
+    while [ true ]
+    do
+        vms=`nova list|grep -i active|grep alu|wc -l`;
+        date "+%Y-%m-%d %H:%M:%S"
+        if [ $vms -eq $vm_number ]; then
+            echo -e "all [$vms] vms started\n"
+            end_time=$(date +%s)
+            break
+        else
+            echo -e "found that [$vms] vms started\n"
+        fi
+    done
+    echo -e "execute command [nova list]"
+    nova list
+    echo "Total elapse: $((end_time-start_time)) seconds"
 }
 
 delete_vms()
 {
 	echo "====> delete vm's <===="
-	date
-	nova delete alu-perf-1 alu-perf-2 alu-perf-3 alu-perf-4 alu-perf-5 alu-perf-6 alu-perf-7 alu-perf-8 alu-perf-9 alu-perf-10;
-	echo
+    date "+%Y-%m-%d %H:%M:%S"
+    start_time=$(date +%s)
+	echo "delte vm is:"$vm_str
+	nova delete $vm_str
 
-	for i in `seq 10` 
-	do
-		echo -e "count vm status [${i}] - `date` ";
-		nova list|grep ACTIVE|grep alu|wc -l;
-	done
+    while [ true ]
+    do
+        vms=`nova list|grep alu|wc -l`;
+        date "+%Y-%m-%d %H:%M:%S"
+        if [ $vms -eq 0 ]; then
+            echo -e "all [$vm_number] vms deleted\n"
+            end_time=$(date +%s)
+            break
+        else
+            echo -e "found that [$vms] vms alive\n"
+        fi
+    done
+    echo -e "execute command [nova list]"
+    nova list
+    echo "Total elapse: $((end_time-start_time)) seconds"
 }
 
 
-while getopts "a:" arg
+while getopts "n:e:a:" arg
 do
     case $arg in
+	n)
+	    echo "VM number is:$OPTARG"
+	    vm_number=$OPTARG
+	    for i in `seq $vm_number`
+	    do  
+	        vm_str=${vm_str}" alu-perf-"${i}
+	    done
+	    echo "vm array is:"$vm_str;;
+	e)
+	    echo "network UUID is: $OPTARG"
+	    network_uuid=$OPTARG;;
         a)
             echo "action's arg:$OPTARG"
             case $OPTARG in
@@ -104,12 +179,9 @@ do
                     echo "unknow action"
                     exit 1;;
             esac;;
-
         ?)
             echo "unkown argument"
             exit 1;;
 
     esac
 done
-
-
