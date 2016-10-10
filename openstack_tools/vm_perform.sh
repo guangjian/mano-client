@@ -4,25 +4,26 @@
 # for openstack vm performance testing script
 # Author: Guangjian guangjian@gmail.com
 #
-# USAGE: vm_perform.sh -n vm_number -e network_uuid -a <start|stop|restart|delete|create>
+# USAGE: vm_perform.sh -z zone_name -n vm_number -e network_uuid -a <start|stop|restart|delete|create>
 #
 
-if [ $# != 6 ]
+if [ $# != 8 ]
 then
-	echo "usage  vm_perform.sh -n vm_number -e network_uuid -a <start|stop|restart|delete|create>"
-	exit 1
+    echo "usage  vm_perform.sh -z zone_name -n vm_number -e network_uuid -a <start|stop|restart|delete|create>"
+    exit 1
 fi
 
-source /root/keystonerc_guangjian
+source /root/keystonerc_admin
 
 vm_number=1
+zone_name="zone0"
 
 create_vms()
 {
     echo "====> start vm's <===="
     date "+%Y-%m-%d %H:%M:%S"
     start_time=$(date +%s)
-	nova boot --flavor default --image redhat7-v3 --max-count $vm_number --nic net-id=$network_uuid alu-perf
+    nova boot --flavor default --image redhat7-v3 --max-count $vm_number --availability-zone $zone_name --nic net-id=$network_uuid alu-perf
     while [ true ]
     do  
         vms=`nova list|grep -i active|grep alu|wc -l`;
@@ -43,14 +44,14 @@ create_vms()
 
 stop_vms()
 {
-	echo "====> stop vm's <===="
+    echo "====> stop vm's <===="
     date "+%Y-%m-%d %H:%M:%S"
     start_time=$(date +%s)
-	nova stop $vm_str;
-	echo
+    nova stop $vm_str;
+    echo
 
-	while [ true ]
-	do
+    while [ true ]
+    do
         vms=`nova list|grep -i Shutoff|grep alu|wc -l`;        
         date "+%Y-%m-%d %H:%M:%S"
         if [ $vms -eq $vm_number ]; then
@@ -60,7 +61,7 @@ stop_vms()
         else
             echo -e "found that [$vms] vms stopped\n"
         fi
-	done
+    done
     echo -e "execute command [nova list]"
     nova list
     echo "Total elapse: $((end_time-start_time)) seconds"
@@ -68,11 +69,11 @@ stop_vms()
 
 start_vms()
 {
-	echo "====> start vm's <===="
+    echo "====> start vm's <===="
     date "+%Y-%m-%d %H:%M:%S"
-	start_time=$(date +%s)
-	nova start $vm_str;
-	echo
+    start_time=$(date +%s)
+    nova start $vm_str;
+    echo
 
     while [ true ]
     do  
@@ -95,15 +96,15 @@ start_vms()
 
 restart_vms()
 {
-	echo "====> restart vm's <===="
+    echo "====> restart vm's <===="
     date "+%Y-%m-%d %H:%M:%S"
     start_time=$(date +%s)
-	for j in `seq $vm_number`
-	do
-		echo "reboot vm [alu-perf-${j}]"
-		#nova reboot --hard alu-perf-${j}
-		nova reboot alu-perf-${j}
-	done
+    for j in `seq $vm_number`
+    do
+        echo "reboot vm [alu-perf-${j}]"
+        #nova reboot --hard alu-perf-${j}
+        nova reboot alu-perf-${j}
+    done
 
     while [ true ]
     do
@@ -124,11 +125,11 @@ restart_vms()
 
 delete_vms()
 {
-	echo "====> delete vm's <===="
+    echo "====> delete vm's <===="
     date "+%Y-%m-%d %H:%M:%S"
     start_time=$(date +%s)
-	echo "delte vm is:"$vm_str
-	nova delete $vm_str
+    echo "delte vm is:"$vm_str
+    nova delete $vm_str
 
     while [ true ]
     do
@@ -148,40 +149,44 @@ delete_vms()
 }
 
 
-while getopts "n:e:a:" arg
+while getopts "z:n:e:a:" arg
 do
     case $arg in
-	n)
-	    echo "VM number is:$OPTARG"
-	    vm_number=$OPTARG
-	    for i in `seq $vm_number`
-	    do  
-	        vm_str=${vm_str}" alu-perf-"${i}
-	    done
-	    echo "vm array is:"$vm_str;;
-	e)
-	    echo "network UUID is: $OPTARG"
-	    network_uuid=$OPTARG;;
-        a)
-            echo "action's arg:$OPTARG"
-            case $OPTARG in
-                create)
-                    create_vms;;
-                stop)
-                    stop_vms;;
-                start)
-                    start_vms;;
-                restart)
-                    restart_vms;;
-                delete)
-                    delete_vms;;
-                *)
-                    echo "unknow action"
-                    exit 1;;
-            esac;;
-        ?)
-            echo "unkown argument"
-            exit 1;;
+    z)
+        echo "Zone name is:$OPTARG"
+        zone_name=$OPTARG;;
+    n)
+        echo "VM number is:$OPTARG"
+        vm_number=$OPTARG
+        for i in `seq $vm_number`
+        do  
+            vm_str=${vm_str}" alu-perf-"${i}
+        done
+        echo "vm array is:"$vm_str;;
+    e)
+        echo "network UUID is: $OPTARG"
+        network_uuid=$OPTARG;;
+    a)
+        echo "action's arg:$OPTARG"
+        case $OPTARG in
+            create)
+                create_vms;;
+            stop)
+                stop_vms;;
+            start)
+                start_vms;;
+            restart)
+                restart_vms;;
+            delete)
+                delete_vms;;
+            *)
+                echo "unknow action"
+                exit 1;;
+        esac;;
+    ?)
+        echo "unkown argument"
+        exit 1;;
 
     esac
 done
+
